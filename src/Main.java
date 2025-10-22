@@ -12,25 +12,33 @@ public class Main {
         try{
             System.out.println("Starting Connection........");
             Connection con = DriverManager.getConnection(
-                    "jdbc:mysql://161.35.177.175:3306/jdbctest", "testuser", "testuser");
+                    "jdbc:mysql://161.35.177.175:3306/hw3astahly01", "astahly01", "p1");
             System.out.println("Connection Established");
 
             // get user input
-            String v_major;
+            String v_fname;
+            String v_lname;
             Scanner scan = new Scanner(System.in);
-            System.out.println("Enter major");
-            v_major = scan.nextLine();
-            String query = "select s.studentid, studentmajor, courseid, grade"
-                    + " from Student s, Enroll e"
-                    + " where s.studentid = e.studentid"
-                    + " and studentmajor = ?";
+            System.out.println("Enter A Director's First Name:");
+            v_fname = scan.nextLine();
+            System.out.println("Enter A Director's Last Name:");
+            v_lname = scan.nextLine();
+            String query = "select M.movie_ID, M.title"
+                    + " from Movies M"
+                    + " where M.movie_ID NOT IN ("
+                    + "SELECT MD.movie_ID"
+                    + " FROM Movie_Directors MD"
+                    + " JOIN Directors D ON MD.director_ID = D.director_ID"
+                    + " WHERE D.fname = ? AND D.lname = ?"
+                    + " )";
             PreparedStatement stmt = con.prepareStatement(query);
-            stmt.setString(1,v_major);
+            stmt.setString(1,v_fname);
+            stmt.setString(2,v_lname);
             ResultSet result = stmt.executeQuery();
             System.out.println("Processing Results");
             while(result.next()) {
-                System.out.println("Sid " + result.getString("s.studentid"));
-                System.out.println("Cid " + result.getString("courseid"));
+                System.out.println("Mid: " + result.getString("M.movie_ID"));
+                System.out.println("Title: " + result.getString("M.title"));
             }
             con.close();
         }
