@@ -53,6 +53,12 @@ public class Main {
             System.out.println("Other Error");
         }
     }
+
+    private static void printMenu() {
+        System.out.println("1. Show the Director with the Most Movies Directed");
+        System.out.println("2. Show all Movies not Directed by a Chosen Director");
+        System.out.println("3. Show all Movies not Directed by a Chosen Director");
+    }
 }
 
 
