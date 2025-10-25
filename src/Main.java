@@ -15,28 +15,41 @@ public class Main {
                     "jdbc:mysql://161.35.177.175:3306/hw3astahly01", "astahly01", "p1");
             System.out.println("Connection Established");
             Scanner scan = new Scanner(System.in);
-            int choice = scan.nextInt();
-            scan.nextLine();
-            printMenu();
-            switch (choice) {
-                case 1:
-                    runQuery1(con);
-                    break;
-                case 2:
-                    runQuery2(con, scan);
-                    break;
-                case 3:
-                    runQuery3(con);
-                    break;
-                case 4:
-                    runQuery4(con, scan);
-                    break;
-                case 5:
-                    runQuery5(con, scan);
-                    break;
-                case 6:
-                    runQuery6(con, scan);
-                    break;
+            boolean exit = false;
+            while (!exit) {
+                printMenu();
+                System.out.print("Enter your Choice: ");
+                    int choice = scan.nextInt();
+                    scan.nextLine();
+                    switch (choice) {
+                        case 1:
+                            runQuery1(con);
+                            break;
+                        case 2:
+                            runQuery2(con, scan);
+                            break;
+                        case 3:
+                            runQuery3(con);
+                            break;
+                        case 4:
+                            runQuery4(con, scan);
+                            break;
+                        case 5:
+                            runQuery5(con);
+                            break;
+                        case 6:
+                            runQuery6(con, scan);
+                            break;
+                        case 7:
+                            exit = true;
+                            System.out.println("Exiting...");
+                            con.close();
+                            break;
+                            default:
+                                System.out.println("Invalid Input. Please enter a number between 1-7");
+                                break;
+                    }
+
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage() + " Can't connect to database");
@@ -50,12 +63,13 @@ public class Main {
     }
 
     private static void printMenu() {
-        System.out.println("1. Show the Director with the Most Movies Directed");
+        System.out.println("\n1. Show the Director with the Most Movies Directed");
         System.out.println("2. Show all Movies not Directed by a Chosen Director");
-        System.out.println("3. Show all Directors who have Directed Each Genre at Least Once");
+        System.out.println("3. Show all Directors who have Directed Every Genre at Least Twice");
         System.out.println("4. Show the Number of Movies Directed By a Chosen Director and Whether it's Below or Above the Average Number of Movies Directed by All Directors");
-        System.out.println("5. Show a Chosen Genre, the Directors who have worked with the Chosen Genre at Least Once, and Average Rating of All Movies with the Chosen Genre");
-        System.out.println("6. Show All Directors who have made at Least One Movie in Every Genre if the Movie is Greater than or Equal to a Chosen Rating");
+        System.out.println("5. Show the Number of Directors who have Worked with the Each Genre and Average Rating of All Movies For Each Genre");
+        System.out.println("6. Show all Directors who have made at Least One Movie in Every Genre if the Movie is Greater than or Equal to a Chosen Rating");
+        System.out.println("7. Exit the Program");
     }
 
     private static void runQuery1(Connection con) {
@@ -64,7 +78,7 @@ public class Main {
                     fname,
                     lname,
                     totalMovies,
-                    CASE\s
+                    CASE
                         WHEN totalMovies >= 3 THEN 'Highly Active Director'
                         WHEN totalMovies = 2 THEN 'Moderately Active Director'
                         ELSE 'Less Active Director'
@@ -84,14 +98,19 @@ public class Main {
                         D.director_ID, D.fname, D.lname
                 ) AS DirectorCounts;
                 """;
-        PreparedStatement stmt = con.prepareStatement(query);
-        ResultSet result = stmt.executeQuery();
-        System.out.println("Processing Results");
-        while (result.next()) {
-            System.out.println("Mid: " + result.getString("M.movie_ID"));
-            System.out.println("Title: " + result.getString("M.title"));
+        try {
+            PreparedStatement stmt = con.prepareStatement(query);
+            ResultSet result = stmt.executeQuery();
+            System.out.println("\nProcessing Results");
+            while (result.next()) {
+                System.out.println("First Name: " + result.getString("fname"));
+                System.out.println("Last Name: " + result.getString("lname"));
+                System.out.println("Total Movies: " + result.getString("totalMovies"));
+                System.out.println("Activity: " + result.getString("activityLevel"));
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage() + " Can't connect to database");
         }
-        con.close();
     }
     private static void runQuery2(Connection con, Scanner scan) {
         String v_fname;
@@ -108,39 +127,83 @@ public class Main {
                 + " JOIN Directors D ON MD.director_ID = D.director_ID"
                 + " WHERE D.fname = ? AND D.lname = ?"
                 + " )";
-        PreparedStatement stmt = con.prepareStatement(query);
-        stmt.setString(1, v_fname);
-        stmt.setString(2, v_lname);
-        ResultSet result = stmt.executeQuery();
-        System.out.println("Processing Results");
-        while (result.next()) {
-            System.out.println("Mid: " + result.getString("M.movie_ID"));
-            System.out.println("Title: " + result.getString("M.title"));
+        try {
+            PreparedStatement stmt = con.prepareStatement(query);
+            stmt.setString(1, v_fname);
+            stmt.setString(2, v_lname);
+            ResultSet result = stmt.executeQuery();
+            System.out.println("\nProcessing Results");
+            boolean resultsFound = false;
+            while (result.next()) {
+                resultsFound = true;
+                System.out.println("Movie ID: " + result.getString("M.movie_ID"));
+                System.out.println("Title: " + result.getString("M.title"));
+            }
+
+            if (!resultsFound) {
+                System.out.println("No Movies Found");
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage() + " Can't connect to database");
         }
-        con.close();
     }
 
     private static void runQuery3(Connection con) {
-        String query = "SELECT fname, lname"
-                + " from Directors d"
-                + " where not exists ("
-                + "SELECT genre_ID"
-                + " from Genre g"
-                + " Except"
-                + " SELECT genre_ID"
-                + " from Movie_Genres mg JOIN Movie_Directors md on"
-                + "mg.movie_ID = md.movie_ID"
-                + " where d.director_ID = md.director_ID";
-        PreparedStatement stmt = con.prepareStatement(query);
-        ResultSet result = stmt.executeQuery();
-        System.out.println("Processing Results");
-        while (result.next()) {
-            System.out.println("First Name: " + result.getString("M.fname"));
-            System.out.println("Last Name: " + result.getString("M.lname"));
+        String query = """
+SELECT
+    d.fname,
+    d.lname
+FROM
+    Directors d
+WHERE
+    NOT EXISTS (
+        SELECT
+            g.genre_ID
+        FROM
+            Genre g
+        WHERE
+            g.genre_ID NOT IN (
+                SELECT
+                    mg.genre_ID
+                FROM
+                    Movie_Genres mg
+                JOIN
+                    Movie_Directors md ON mg.movie_ID = md.movie_ID
+                WHERE
+                    md.director_ID = d.director_ID
+                GROUP BY
+                    mg.genre_ID
+                HAVING
+                    COUNT(mg.movie_ID) >= 2
+            )
+    );
+""";
+        try {
+            PreparedStatement stmt = con.prepareStatement(query);
+            ResultSet result = stmt.executeQuery();
+            System.out.println("Processing Results");
+            boolean resultsFound = false;
+            while (result.next()) {
+                resultsFound = true;
+                System.out.println("First Name: " + result.getString("d.fname"));
+                System.out.println("Last Name: " + result.getString("d.lname"));
+            }
+
+            if (!resultsFound) {
+                System.out.println("No Directors Found");
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage() + " Can't connect to database");
         }
     }
 
     private static void runQuery4(Connection con, Scanner scan) {
+        String v_fname;
+        String v_lname;
+        System.out.println("Enter A Director's First Name:");
+        v_fname = scan.nextLine();
+        System.out.println("Enter A Director's Last Name:");
+        v_lname = scan.nextLine();
         String query = "WITH mtable AS ("
                 + " SELECT  director_id, COUNT(*) AS moviecount"
                 + " FROM  Movie_Directors"
@@ -159,78 +222,93 @@ public class Main {
                 + " END AS Comparison"
                 + " FROM Directors d LEFT JOIN AllDirectors ad ON d.director_id = ad.director_id"
                 + " WHERE d.fname = ? AND d.lname = ?";
-        PreparedStatement stmt = con.prepareStatement(query);
-        ResultSet result = stmt.executeQuery();
-        System.out.println("Processing Results");
-        while (result.next()) {
-            System.out.println("First Name: " + result.getString("M.movie_ID"));
-            System.out.println("Last Name: " + result.getString("M.title"));
+        try {
+            PreparedStatement stmt = con.prepareStatement(query);
+            stmt.setString(1, v_fname);
+            stmt.setString(2, v_lname);
+            ResultSet result = stmt.executeQuery();
+            System.out.println("Processing Results");
+            while (result.next()) {
+                System.out.println("Movies Directed: " + result.getString("moviecount"));
+                System.out.println("Comparison to Average Movies Directed: " + result.getString("Comparison"));
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage() + " Can't connect to database");
         }
     }
 
-    public static void runQuery5(Connection con, Scanner scan) {
-        String v_generename;
+    public static void runQuery5(Connection con) {
         String query = """
                 SELECT
-                    G.genrename,
-                    COUNT(DISTINCT MD.director_ID) AS directors_in_genre,
-                    ROUND(AVG(M.rating), 2)        AS avg_rating,
+                    g.genrename,
+                    COUNT(DISTINCT md.director_ID) AS directors_in_genre,
+                    ROUND(AVG(m.rating), 2) AS avg_rating,
                     CASE
-                        WHEN AVG(M.rating) >= ? THEN 'Highly Rated'
+                        WHEN AVG(m.rating) >= 8.0 THEN 'Highly Rated'
                         ELSE 'Not Highly Rated'
-                    END AS rating_label
-                FROM Genre G
-                JOIN Movie_Genres    MG ON G.genre_ID  = MG.genre_ID
-                JOIN Movie_Directors MD ON MG.movie_ID = MD.movie_ID
-                JOIN Movies          M  ON M.movie_ID  = MG.movie_ID
-                WHERE (? IS NULL OR G.genrename = ?)
-                GROUP BY G.genre_ID, G.genrename
-                ORDER BY directors_in_genre DESC, G.genrename;
+                    END rating_label
+                FROM Genre g
+                JOIN Movie_Genres mg ON g.genre_ID = mg.genre_ID
+                JOIN Movie_Directors md ON mg.movie_ID = md.movie_ID
+                JOIN Movies m ON m.movie_ID = mg.movie_ID
+                GROUP BY g.genre_ID, g.genrename
+                ORDER BY directors_in_genre DESC, g.genrename;
                 """;
-        System.out.println("Enter A Genre or Leave Black to See Them All:");
-        v_generename = scan.nextLine();
-        PreparedStatement stmt = con.prepareStatement(query);
-        stmt.setString(1, v_generename);
-        ResultSet result = stmt.executeQuery();
-        System.out.println("Processing Results");
-        while (result.next()) {
-            System.out.println("Genre: " + result.getString("G.genrename"));
-            System.out.println("Directors In Genre: " + result.getString("directors_in_genre"));
-            System.out.println("Average Rating of All Movies in Genre: " + result.getString("avg_rating"));
+        try {
+            PreparedStatement stmt = con.prepareStatement(query);
+            ResultSet result = stmt.executeQuery();
+            System.out.println("Processing Results");
+            while (result.next()) {
+                System.out.println("\nGenre: " + result.getString("G.genrename"));
+                System.out.println("Directors In Genre: " + result.getString("directors_in_genre"));
+                System.out.println("Average Rating of All Movies in Genre: " + result.getString("avg_rating"));
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage() + " Can't connect to database");
         }
     }
 
     public static void runQuery6(Connection con, Scanner scan) {
         String v_rating;
-        String query = """
-SELECT D.director_ID, D.fname, D.lname
-        FROM Directors D
-        WHERE NOT EXISTS (
-                SELECT 1
-                FROM Genre G
-                WHERE NOT EXISTS (
-                        SELECT 1
-                        FROM Movie_Directors MD
-                        JOIN Movie_Genres   MG ON MD.movie_ID = MG.movie_ID
-                        JOIN Movies         M  ON M.movie_ID  = MG.movie_ID
-                        WHERE MD.director_ID = D.director_ID
-                        AND MG.genre_ID    = G.genre_ID
-                        AND M.rating      >= ?
-                )
-        )
-        ORDER BY D.lname, D.fname;
-""";
-        System.out.println("Enter A Genre or Leave Black to See Them All:");
+        System.out.println("Enter A Rating:");
         v_rating = scan.nextLine();
-        PreparedStatement stmt = con.prepareStatement(query);
-        stmt.setString(1, v_rating);
-        ResultSet result = stmt.executeQuery();
-        System.out.println("Processing Results");
-        while (result.next()) {
-            System.out.println("Director ID: " + result.getString("D.director_ID"));
-            System.out.println("First Name: " + result.getString("D.fname"));
-            System.out.println("Last Name: " + result.getString("D.lname"));
-        }
+        String query = """
+
+                SELECT d.director_ID, d.fname, d.lname
+                                                            FROM Directors d
+                                                            WHERE NOT EXISTS (
+                                                              SELECT g.genre_ID
+                                                              FROM Genre g
+                                                              WHERE g.genre_ID NOT IN (
+                                                                SELECT mg.genre_ID
+                                                                FROM Movie_Directors md
+                                                                JOIN Movie_Genres mg ON md.movie_ID = mg.movie_ID
+                                                                JOIN Movies m ON m.movie_ID = mg.movie_ID
+                                                                WHERE md.director_ID = d.director_ID
+                                                                  AND m.rating      >= ?
+                                                              )
+                                                            )
+                                                            ORDER BY d.lname, d.fname;
+""";
+       try {
+           PreparedStatement stmt = con.prepareStatement(query);
+           stmt.setString(1, v_rating);
+           ResultSet result = stmt.executeQuery();
+           System.out.println("Processing Results");
+           boolean resultsFound = false;
+           while (result.next()) {
+               resultsFound = true;
+               System.out.println("Director ID: " + result.getString("D.director_ID"));
+               System.out.println("First Name: " + result.getString("D.fname"));
+               System.out.println("Last Name: " + result.getString("D.lname"));
+           }
+
+           if (!resultsFound) {
+               System.out.println("No Directors Found");
+           }
+       } catch (SQLException e) {
+           System.out.println(e.getMessage() + " Can't connect to database");
+       }
     }
 }
 
