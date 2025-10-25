@@ -1,6 +1,7 @@
 
 import java.sql.*;
 import java.util.*;
+
 public class Main {
     public static void main(String[] args) {
         try {
@@ -19,43 +20,44 @@ public class Main {
             while (!exit) {
                 printMenu();
                 System.out.print("Enter your Choice: ");
-                    int choice = scan.nextInt();
-                    scan.nextLine();
-                    switch (choice) {
-                        case 1:
-                            runQuery1(con);
-                            break;
-                        case 2:
-                            runQuery2(con, scan);
-                            break;
-                        case 3:
-                            runQuery3(con);
-                            break;
-                        case 4:
-                            runQuery4(con, scan);
-                            break;
-                        case 5:
-                            runQuery5(con);
-                            break;
-                        case 6:
-                            runQuery6(con, scan);
-                            break;
-                        case 7:
-                            exit = true;
-                            System.out.println("Exiting...");
-                            con.close();
-                            break;
-                            default:
-                                System.out.println("Invalid Input. Please enter a number between 1-7");
-                                break;
-                    }
+                int choice = scan.nextInt();
+                scan.nextLine();
+                switch (choice) {
+                    case 1:
+                        runQuery1(con);
+                        break;
+                    case 2:
+                        runQuery2(con, scan);
+                        break;
+                    case 3:
+                        runQuery3(con);
+                        break;
+                    case 4:
+                        runQuery4(con, scan);
+                        break;
+                    case 5:
+                        runQuery5(con);
+                        break;
+                    case 6:
+                        runQuery6(con, scan);
+                        break;
+                    case 7:
+                        exit = true;
+                        System.out.println("Exiting...");
+                        con.close();
+                        break;
+                    default:
+                        System.out.println("Invalid Input. Please enter a number between 1-7");
+                        break;
+                }
 
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage() + " Can't connect to database");
-            while (e != null) {
-                System.out.println("Message: " + e.getMessage());
-                e = e.getNextException();
+            SQLException throwables = e;
+            System.out.println(throwables.getMessage() + " Can't connect to database");
+            while (throwables != null) {
+                System.out.println("Message: " + throwables.getMessage());
+                throwables = throwables.getNextException();
             }
         } catch (Exception e) {
             System.out.println("Other Error");
@@ -98,10 +100,9 @@ public class Main {
                         D.director_ID, D.fname, D.lname
                 ) AS DirectorCounts;
                 """;
-        try {
-            PreparedStatement stmt = con.prepareStatement(query);
-            ResultSet result = stmt.executeQuery();
-            System.out.println("\nProcessing Results");
+        try (PreparedStatement stmt = con.prepareStatement(query);
+             ResultSet result = stmt.executeQuery()) {
+            System.out.println("Processing Results");
             while (result.next()) {
                 System.out.println("First Name: " + result.getString("fname"));
                 System.out.println("Last Name: " + result.getString("lname"));
@@ -112,6 +113,7 @@ public class Main {
             System.out.println(e.getMessage() + " Can't connect to database");
         }
     }
+
     private static void runQuery2(Connection con, Scanner scan) {
         String v_fname;
         String v_lname;
@@ -119,20 +121,21 @@ public class Main {
         v_fname = scan.nextLine();
         System.out.println("Enter A Director's Last Name:");
         v_lname = scan.nextLine();
-        String query = "select M.movie_ID, M.title"
-                + " from Movies M"
-                + " where M.movie_ID NOT IN ("
-                + "SELECT MD.movie_ID"
-                + " FROM Movie_Directors MD"
-                + " JOIN Directors D ON MD.director_ID = D.director_ID"
-                + " WHERE D.fname = ? AND D.lname = ?"
-                + " )";
-        try {
-            PreparedStatement stmt = con.prepareStatement(query);
+        String query = """
+                SELECT M.movie_ID, M.title
+                                from Movies M
+                                 where M.movie_ID NOT IN (
+                                SELECT MD.movie_ID
+                                 FROM Movie_Directors MD
+                                 JOIN Directors D ON MD.director_ID = D.director_ID
+                                 WHERE D.fname = ? AND D.lname = ?
+                                 );
+                """;
+        try (PreparedStatement stmt = con.prepareStatement(query);
+             ResultSet result = stmt.executeQuery()) {
             stmt.setString(1, v_fname);
             stmt.setString(2, v_lname);
-            ResultSet result = stmt.executeQuery();
-            System.out.println("\nProcessing Results");
+            System.out.println("Processing Results");
             boolean resultsFound = false;
             while (result.next()) {
                 resultsFound = true;
@@ -150,37 +153,36 @@ public class Main {
 
     private static void runQuery3(Connection con) {
         String query = """
-SELECT
-    d.fname,
-    d.lname
-FROM
-    Directors d
-WHERE
-    NOT EXISTS (
-        SELECT
-            g.genre_ID
-        FROM
-            Genre g
-        WHERE
-            g.genre_ID NOT IN (
                 SELECT
-                    mg.genre_ID
+                    d.fname,
+                    d.lname
                 FROM
-                    Movie_Genres mg
-                JOIN
-                    Movie_Directors md ON mg.movie_ID = md.movie_ID
+                    Directors d
                 WHERE
-                    md.director_ID = d.director_ID
-                GROUP BY
-                    mg.genre_ID
-                HAVING
-                    COUNT(mg.movie_ID) >= 2
-            )
-    );
-""";
-        try {
-            PreparedStatement stmt = con.prepareStatement(query);
-            ResultSet result = stmt.executeQuery();
+                    NOT EXISTS (
+                        SELECT
+                            g.genre_ID
+                        FROM
+                            Genre g
+                        WHERE
+                            g.genre_ID NOT IN (
+                                SELECT
+                                    mg.genre_ID
+                                FROM
+                                    Movie_Genres mg
+                                JOIN
+                                    Movie_Directors md ON mg.movie_ID = md.movie_ID
+                                WHERE
+                                    md.director_ID = d.director_ID
+                                GROUP BY
+                                    mg.genre_ID
+                                HAVING
+                                    COUNT(mg.movie_ID) >= 2
+                            )
+                    );
+                """;
+        try (PreparedStatement stmt = con.prepareStatement(query);
+             ResultSet result = stmt.executeQuery()) {
             System.out.println("Processing Results");
             boolean resultsFound = false;
             while (result.next()) {
@@ -204,29 +206,30 @@ WHERE
         v_fname = scan.nextLine();
         System.out.println("Enter A Director's Last Name:");
         v_lname = scan.nextLine();
-        String query = "WITH mtable AS ("
-                + " SELECT  director_id, COUNT(*) AS moviecount"
-                + " FROM  Movie_Directors"
-                + "  GROUP BY director_id"
-                + " ),"
-                + " AllDirectors AS ("
-                + " SELECT  d.director_id, mt.moviecount, AVG(COALESCE(mt.moviecount, 0)) OVER () AS allmovieavg"
-                + " FROM Directors d "
-                + " LEFT JOIN mtable mt ON d.director_id = mt.director_id"
-                + " )"
-                + " SELECT COALESCE(ad.moviecount, 0) AS moviecount,"
-                + "  CASE"
-                + "  WHEN ad.allmovieavg < COALESCE(ad.moviecount, 0) THEN 'Above average'"
-                + "  WHEN ad.allmovieavg > COALESCE(ad.moviecount, 0) THEN 'Below average'"
-                + "  ELSE 'Average'"
-                + " END AS Comparison"
-                + " FROM Directors d LEFT JOIN AllDirectors ad ON d.director_id = ad.director_id"
-                + " WHERE d.fname = ? AND d.lname = ?";
-        try {
-            PreparedStatement stmt = con.prepareStatement(query);
+        String query = """
+                WITH mtable AS (
+                 SELECT  director_id, COUNT(*) AS moviecount
+                 FROM  Movie_Directors
+                 GROUP BY director_id
+                ),
+                AllDirectors AS (
+                 SELECT  d.director_id, mt.moviecount, AVG(COALESCE(mt.moviecount, 0)) OVER () AS allmovieavg"
+                 FROM Directors d 
+                 LEFT JOIN mtable mt ON d.director_id = mt.director_id"
+                )
+                SELECT COALESCE(ad.moviecount, 0) AS moviecount,"
+                 CASE
+                  WHEN ad.allmovieavg < COALESCE(ad.moviecount, 0) THEN 'Above average'"
+                  WHEN ad.allmovieavg > COALESCE(ad.moviecount, 0) THEN 'Below average'"
+                  ELSE 'Average'
+                 END AS Comparison
+                FROM Directors d LEFT JOIN AllDirectors ad ON d.director_id = ad.director_id
+                WHERE d.fname = ? AND d.lname = ?
+                """;
+        try (PreparedStatement stmt = con.prepareStatement(query);
+             ResultSet result = stmt.executeQuery()) {
             stmt.setString(1, v_fname);
             stmt.setString(2, v_lname);
-            ResultSet result = stmt.executeQuery();
             System.out.println("Processing Results");
             while (result.next()) {
                 System.out.println("Movies Directed: " + result.getString("moviecount"));
@@ -254,9 +257,8 @@ WHERE
                 GROUP BY g.genre_ID, g.genrename
                 ORDER BY directors_in_genre DESC, g.genrename;
                 """;
-        try {
-            PreparedStatement stmt = con.prepareStatement(query);
-            ResultSet result = stmt.executeQuery();
+        try (PreparedStatement stmt = con.prepareStatement(query);
+             ResultSet result = stmt.executeQuery()) {
             System.out.println("Processing Results");
             while (result.next()) {
                 System.out.println("\nGenre: " + result.getString("G.genrename"));
@@ -273,42 +275,40 @@ WHERE
         System.out.println("Enter A Rating:");
         v_rating = scan.nextLine();
         String query = """
-
                 SELECT d.director_ID, d.fname, d.lname
-                                                            FROM Directors d
-                                                            WHERE NOT EXISTS (
-                                                              SELECT g.genre_ID
-                                                              FROM Genre g
-                                                              WHERE g.genre_ID NOT IN (
-                                                                SELECT mg.genre_ID
-                                                                FROM Movie_Directors md
-                                                                JOIN Movie_Genres mg ON md.movie_ID = mg.movie_ID
-                                                                JOIN Movies m ON m.movie_ID = mg.movie_ID
-                                                                WHERE md.director_ID = d.director_ID
-                                                                  AND m.rating      >= ?
-                                                              )
-                                                            )
-                                                            ORDER BY d.lname, d.fname;
-""";
-       try {
-           PreparedStatement stmt = con.prepareStatement(query);
-           stmt.setString(1, v_rating);
-           ResultSet result = stmt.executeQuery();
-           System.out.println("Processing Results");
-           boolean resultsFound = false;
-           while (result.next()) {
-               resultsFound = true;
-               System.out.println("Director ID: " + result.getString("D.director_ID"));
-               System.out.println("First Name: " + result.getString("D.fname"));
-               System.out.println("Last Name: " + result.getString("D.lname"));
-           }
+                FROM Directors d
+                WHERE NOT EXISTS (
+                 SELECT g.genre_ID
+                 FROM Genre g
+                 WHERE g.genre_ID NOT IN (
+                  SELECT mg.genre_ID
+                  FROM Movie_Directors md
+                  JOIN Movie_Genres mg ON md.movie_ID = mg.movie_ID
+                  JOIN Movies m ON m.movie_ID = mg.movie_ID
+                  WHERE md.director_ID = d.director_ID
+                  AND m.rating >= ?
+                 )
+                )
+                ORDER BY d.lname, d.fname;
+                """;
+        try (PreparedStatement stmt = con.prepareStatement(query);
+             ResultSet result = stmt.executeQuery()) {
+            stmt.setString(1, v_rating);
+            System.out.println("Processing Results");
+            boolean resultsFound = false;
+            while (result.next()) {
+                resultsFound = true;
+                System.out.println("Director ID: " + result.getString("D.director_ID"));
+                System.out.println("First Name: " + result.getString("D.fname"));
+                System.out.println("Last Name: " + result.getString("D.lname"));
+            }
 
-           if (!resultsFound) {
-               System.out.println("No Directors Found");
-           }
-       } catch (SQLException e) {
-           System.out.println(e.getMessage() + " Can't connect to database");
-       }
+            if (!resultsFound) {
+                System.out.println("No Directors Found");
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage() + " Can't connect to database");
+        }
     }
 }
 
