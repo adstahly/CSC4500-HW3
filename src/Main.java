@@ -65,7 +65,7 @@ public class Main {
     }
 
     private static void printMenu() {
-        System.out.println("\n1. Show the Director with the Most Movies Directed");
+        System.out.println("\n1. Show How Many Movies Each director Has Directed and Classify Them as Highly Active, Moderately Active, or Less Active Based on the Total Number of Movies");
         System.out.println("2. Show all Movies not Directed by a Chosen Director");
         System.out.println("3. Show all Directors who have Directed Every Genre at Least Twice");
         System.out.println("4. Show the Number of Movies Directed By a Chosen Director and Whether it's Below or Above the Average Number of Movies Directed by All Directors");
@@ -122,14 +122,24 @@ public class Main {
         System.out.println("Enter A Director's Last Name:");
         v_lname = scan.nextLine();
         String query = """
-                SELECT M.movie_ID, M.title
-                                from Movies M
-                                 where M.movie_ID NOT IN (
-                                SELECT MD.movie_ID
-                                 FROM Movie_Directors MD
-                                 JOIN Directors D ON MD.director_ID = D.director_ID
-                                 WHERE D.fname = ? AND D.lname = ?
-                                 );
+                SELECT
+                 M.movie_ID,
+                 M.title,
+                 M.rating,
+                 M.runtime
+                FROM
+                 Movies M
+                WHERE
+                 M.movie_ID NOT IN (
+                  SELECT
+                   MD.movie_ID
+                  FROM
+                   Movie_Directors MD
+                  JOIN
+                   Directors D ON MD.director_ID = D.director_ID
+                  WHERE
+                    D.fname = 'Leo' AND D.lname = 'Martinez'
+                );
                 """;
         try (PreparedStatement stmt = con.prepareStatement(query);
              ResultSet result = stmt.executeQuery()) {
@@ -141,6 +151,8 @@ public class Main {
                 resultsFound = true;
                 System.out.println("Movie ID: " + result.getString("M.movie_ID"));
                 System.out.println("Title: " + result.getString("M.title"));
+                System.out.println("Rating: " + result.getString("M.rating"));
+                System.out.println("Runtime: " + result.getString("M.runtime"));
             }
 
             if (!resultsFound) {
