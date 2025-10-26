@@ -65,7 +65,7 @@ public class Main {
     }
 
     private static void printMenu() {
-        System.out.println("\n1. Show How Many Movies Each director Has Directed and Classify Them as Highly Active, Moderately Active, or Less Active Based on the Total Number of Movies");
+        System.out.println("\n1. Show how Many Movies Each Director Has Directed and Classify Them as Highly Active, Moderately Active, or Less Active Based on the Total Number of Movies");
         System.out.println("2. Show all Movies not Directed by a Chosen Director");
         System.out.println("3. Show all Directors who have Directed Every Genre at Least Twice");
         System.out.println("4. Show the Number of Movies Directed By a Chosen Director and Whether it's Below or Above the Average Number of Movies Directed by All Directors");
@@ -104,13 +104,13 @@ public class Main {
              ResultSet result = stmt.executeQuery()) {
             System.out.println("Processing Results");
             while (result.next()) {
-                System.out.println("First Name: " + result.getString("fname"));
+                System.out.println("\nFirst Name: " + result.getString("fname"));
                 System.out.println("Last Name: " + result.getString("lname"));
                 System.out.println("Total Movies: " + result.getString("totalMovies"));
                 System.out.println("Activity: " + result.getString("activityLevel"));
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage() + " Can't connect to database");
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
@@ -138,28 +138,30 @@ public class Main {
                   JOIN
                    Directors D ON MD.director_ID = D.director_ID
                   WHERE
-                    D.fname = 'Leo' AND D.lname = 'Martinez'
+                    D.fname = ? AND D.lname = ?
                 );
                 """;
-        try (PreparedStatement stmt = con.prepareStatement(query);
-             ResultSet result = stmt.executeQuery()) {
+        try (PreparedStatement stmt = con.prepareStatement(query)) {
             stmt.setString(1, v_fname);
             stmt.setString(2, v_lname);
-            System.out.println("Processing Results");
-            boolean resultsFound = false;
-            while (result.next()) {
-                resultsFound = true;
-                System.out.println("Movie ID: " + result.getString("M.movie_ID"));
-                System.out.println("Title: " + result.getString("M.title"));
-                System.out.println("Rating: " + result.getString("M.rating"));
-                System.out.println("Runtime: " + result.getString("M.runtime"));
-            }
 
-            if (!resultsFound) {
-                System.out.println("No Movies Found");
+            try (ResultSet result = stmt.executeQuery()) {
+                System.out.println("Processing Results");
+                boolean resultsFound = false;
+                while (result.next()) {
+                    resultsFound = true;
+                    System.out.println("\nMovie ID: " + result.getString("M.movie_ID"));
+                    System.out.println("Title: " + result.getString("M.title"));
+                    System.out.println("Rating: " + result.getString("M.rating"));
+                    System.out.println("Runtime: " + result.getString("M.runtime"));
+                }
+
+                if (!resultsFound) {
+                    System.out.println("\nNo Movies Found");
+                }
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage() + " Can't connect to database");
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
@@ -199,22 +201,22 @@ public class Main {
             boolean resultsFound = false;
             while (result.next()) {
                 resultsFound = true;
-                System.out.println("First Name: " + result.getString("d.fname"));
+                System.out.println("\nFirst Name: " + result.getString("d.fname"));
                 System.out.println("Last Name: " + result.getString("d.lname"));
             }
 
             if (!resultsFound) {
-                System.out.println("No Directors Found");
+                System.out.println("\nNo Directors Found");
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage() + " Can't connect to database");
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
     private static void runQuery4(Connection con, Scanner scan) {
         String v_fname;
         String v_lname;
-        System.out.println("Enter A Director's First Name:");
+        System.out.println("\nEnter A Director's First Name:");
         v_fname = scan.nextLine();
         System.out.println("Enter A Director's Last Name:");
         v_lname = scan.nextLine();
@@ -225,30 +227,33 @@ public class Main {
                  GROUP BY director_id
                 ),
                 AllDirectors AS (
-                 SELECT  d.director_id, mt.moviecount, AVG(COALESCE(mt.moviecount, 0)) OVER () AS allmovieavg"
+                 SELECT  d.director_id, mt.moviecount, AVG(COALESCE(mt.moviecount, 0)) OVER () AS allmovieavg
                  FROM Directors d 
-                 LEFT JOIN mtable mt ON d.director_id = mt.director_id"
+                 LEFT JOIN mtable mt ON d.director_id = mt.director_id
                 )
-                SELECT COALESCE(ad.moviecount, 0) AS moviecount,"
+                SELECT COALESCE(ad.moviecount, 0) AS moviecount,
                  CASE
-                  WHEN ad.allmovieavg < COALESCE(ad.moviecount, 0) THEN 'Above average'"
-                  WHEN ad.allmovieavg > COALESCE(ad.moviecount, 0) THEN 'Below average'"
+                  WHEN ad.allmovieavg < COALESCE(ad.moviecount, 0) THEN 'Above average'
+                  WHEN ad.allmovieavg > COALESCE(ad.moviecount, 0) THEN 'Below average'
                   ELSE 'Average'
                  END AS Comparison
                 FROM Directors d LEFT JOIN AllDirectors ad ON d.director_id = ad.director_id
                 WHERE d.fname = ? AND d.lname = ?
                 """;
-        try (PreparedStatement stmt = con.prepareStatement(query);
-             ResultSet result = stmt.executeQuery()) {
+        try (PreparedStatement stmt = con.prepareStatement(query)) {
+
             stmt.setString(1, v_fname);
             stmt.setString(2, v_lname);
-            System.out.println("Processing Results");
-            while (result.next()) {
-                System.out.println("Movies Directed: " + result.getString("moviecount"));
-                System.out.println("Comparison to Average Movies Directed: " + result.getString("Comparison"));
+
+            try (ResultSet result = stmt.executeQuery()) {
+                System.out.println("Processing Results");
+                while (result.next()) {
+                    System.out.println("\nMovies Directed: " + result.getString("moviecount"));
+                    System.out.println("Comparison to Average Movies Directed: " + result.getString("Comparison"));
+                }
             }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage() + " Can't connect to database");
+            } catch (SQLException e) {
+                System.out.println("Error: " + e.getMessage());
         }
     }
 
@@ -278,7 +283,7 @@ public class Main {
                 System.out.println("Average Rating of All Movies in Genre: " + result.getString("avg_rating"));
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage() + " Can't connect to database");
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
@@ -303,23 +308,23 @@ public class Main {
                 )
                 ORDER BY d.lname, d.fname;
                 """;
-        try (PreparedStatement stmt = con.prepareStatement(query);
-             ResultSet result = stmt.executeQuery()) {
+        try (PreparedStatement stmt = con.prepareStatement(query)) {
             stmt.setString(1, v_rating);
-            System.out.println("Processing Results");
-            boolean resultsFound = false;
-            while (result.next()) {
-                resultsFound = true;
-                System.out.println("Director ID: " + result.getString("D.director_ID"));
-                System.out.println("First Name: " + result.getString("D.fname"));
-                System.out.println("Last Name: " + result.getString("D.lname"));
-            }
-
-            if (!resultsFound) {
-                System.out.println("No Directors Found");
+            try (ResultSet result = stmt.executeQuery()) {
+                System.out.println("Processing Results");
+                boolean resultsFound = false;
+                while (result.next()) {
+                    resultsFound = true;
+                    System.out.println("\nDirector ID: " + result.getString("D.director_ID"));
+                    System.out.println("First Name: " + result.getString("D.fname"));
+                    System.out.println("Last Name: " + result.getString("D.lname"));
+                }
+                if (!resultsFound) {
+                    System.out.println("\nNo Directors Found");
+                }
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage() + " Can't connect to database");
+            System.out.println("Error: " + e.getMessage());
         }
     }
 }
